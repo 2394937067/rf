@@ -1,0 +1,282 @@
+<div id="comment">
+	<!-- 按钮 -->
+	<div class="btns">
+		<button class="btn btn-info btn-sm" id="btn_add">添加</button>
+		<button class="btn btn-danger btn-sm" id="btn_batchDel">批量删除</button>
+	</div>
+	<!-- 数据表格 -->
+	<div class="table_content">
+		<table class="table table-sm table-bordered table-hover text-center">
+		  <thead>
+		    <tr>
+		      <th scope="col"><input type="checkbox"></th>
+		      <th scope="col">内容</th>
+		      <th scope="col">评论时间</th>
+		      <th scope="col">订单id</th>
+		      <th scope="col">操作</th>
+		    </tr>
+		  </thead>
+		  <tbody>
+		    
+		  </tbody>
+		</table>
+	</div>
+	<!-- 模态框 -->
+	<div class="modal fade" id="addressModal">
+	  <div class="modal-dialog modal-lg">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h5 class="modal-title">添加评论</h5>
+	        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+	          <span aria-hidden="true">&times;</span>
+	        </button>
+	      </div>
+	      <div class="modal-body">
+	        <form>
+			  <div class="form-group row">
+			    <div class="col-2 text-right">
+			    	<label for="input_content">内容</label>
+			    </div>
+			    <div class="col-10">
+			    	<input type="text" class="form-control" id="input_content" placeholder="请输入内容">
+			    </div>
+			  </div>
+			  <div class="form-group row">
+			  	<div class="col-2 text-right">
+			  		 <label for="input_commentTime">时间</label>
+			  	</div>
+			    <div class="col-10">
+			    	<input type="text" class="form-control" id="input_commentTime" placeholder="请输入时间">
+			    </div>
+			  </div>
+			  <div class="form-group row">
+			  	<di class="col-2 text-right">
+			  		<label for="input_orderId">订单id</label>
+			  	</di>
+			  	<div class="col-10">
+			  		<select id="input_orderId" class="form-control">
+			  			<option value="" style="display: none;">请选择订单id</option>
+			  		</select>
+			  	</div>
+			  </div>
+			</form>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-secondary" id="btn_none">取消</button>
+	        <button type="button" class="btn btn-primary" id="addAddress">保存</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+</div>
+<script>
+	var baseURL = 'http://182.92.6.254:6677';
+	// 该id是点击修改按钮时获取的id，设置为全局变量
+	var EditId;
+	// 查询所有数据
+	function loadData(){
+		// 在每次追加数据之前，先清空table
+		$('.table tbody').empty();
+		var url_findAll = baseURL+'/comment/findAll';
+		$.get(url_findAll,function(result){
+			result.data.forEach(function(item){
+				var newTr = $(`
+					<tr>
+				      <td><input type="checkbox" value="`+item.id+`"></td>
+				      <td>`+item.content+`</td>
+				      <td>`+item.commentTime+`</td>
+				      <td>`+item.orderId+`</td>
+				      <td>
+						<i class='iconfont icon-edit' id='edit'></i>
+						<i class='iconfont icon-shanchu' id='del'></i>
+				      </td>
+				    </tr>
+				`);
+				// 将生成的newTr追加到tbody上
+				$('.table tbody').append(newTr);
+			})
+		});
+	}
+	// 查询所有订单的id
+	function searchOrderId(){
+		var url_findOrderId = baseURL+'/order/findAll';
+		$.get(url_findOrderId,function(result){
+			result.data.forEach(function(item){
+				var newOption = $(`
+					<option value="`+item.id+`">`+item.id+`</option>
+				`);
+				// 追加到模态框的下拉框中
+				$('#input_orderId').append(newOption);
+			});
+		});
+	}
+	// 关闭提示框，在点击提示框中的x才调用该函数
+	function closeAlert(){
+		$(this).parents('.alert').remove();
+	}
+
+	$(function(){
+		// 加载所有数据
+		loadData();
+
+		searchOrderId();
+		// 显示模态框
+		$('#btn_add').click(function(){
+			$('#addressModal').modal('show');
+		})
+		// 关闭模态框
+		$('#btn_none').click(function(){
+			$('#addressModal').modal('hide');
+		})
+
+		// 监听模态框的关闭，清空模态框内容
+		$('#addressModal').on('hidden.bs.modal', function(e){
+		  $(this).find('form')[0].reset();
+		})
+
+		// 批量删除
+		$('#btn_batchDel').click(function(){
+			var url_batchDel = baseURL+'/comment/batchDelete';
+			var ids = $(':checkbox:checked').map(function(index,item){
+				return $(item).val();
+			}).toArray();
+			var data = '';
+			for(index in ids){
+				if(index == 0){
+					data += 'ids='+ids[index]
+				}else{
+					data +='&ids='+ids[index]
+				}
+			}
+			$.post(url_batchDel,data,function(result){
+				console.log(result);
+				loadData();
+			})
+		})
+
+		// 添加或修改数据
+		$('#addAddress').click(function(){
+			var content = $('#input_content').val();
+			var commentTime = $('#input_commentTime').val();
+			var orderId = $('#input_orderId').val();
+			if(EditId){
+					// id存在，即修改
+					var data = {
+						id:EditId,
+						content:content,
+						commentTime:commentTime,
+						orderId:orderId
+					}
+					var url_editComment = baseURL+'/comment/saveOrUpdate';
+					$.post(url_editComment,data,function(result){
+						console.log(result,'修改');
+						loadData();
+					});
+					// 将id置为空，否则点击修改后再次点击添加，还是修改
+					EditId = '';
+					$('#addressModal').modal('hide');	
+				}else{
+					// id不存在，即添加
+					var data = {
+						content:content,
+						commentTime:commentTime,
+						orderId:orderId
+					}
+					console.log(data,'===')
+					var url_addComment = baseURL+'/comment/saveOrUpdate';
+					$.post(url_addComment,data,function(result){
+						console.log(result);
+						loadData();
+					});
+					$('#addressModal').modal('hide');	
+				}
+		})
+		
+		// 删除与修改按钮
+		$('.table tbody').on('click','i',function(){
+			switch(this.id){
+				// 修改
+				case 'edit':
+					// 打开模态框
+				 	$('#addressModal').modal('show');
+				 	// 获取当前行的值并放入模态框（不能在此处就发送请求）
+					EditId = $(this).parents('tr').find('td').find('input').val();
+				 	var content = $(this).parents('tr').find('td:nth-child(2)').text();
+				 	var commentTime = $(this).parents('tr').find('td:nth-child(3)').text();
+				 	var orderId = $(this).parents('tr').find('td:nth-child(4)').text();
+				 	$('#input_content').val(content);
+				 	$('#input_commentTime').val(commentTime);
+				 	$('#input_orderId').val(orderId);
+					break;
+				// 删除
+				case 'del':
+				 	var url_del = baseURL+'/comment/deleteById';
+					var id = $(this).parents('tr').find('input[type=checkbox]').val();
+					var data = {
+						id:id
+					}
+					$.get(url_del,data,function(result){
+						if(result.status === 200){
+							loadData();
+							// 删除并刷新数据后，追加提示框
+							$(`
+								<div class="alert alert-info alert-dismissible" id='mySuccessAlert'>
+									<div>
+										删除成功
+									</div>
+									<button class="close" onclick="closeAlert.call(this)" id='btn_success'>
+										~
+									</button>
+								</div>
+							`).prependTo($('body'));
+							// 延时调用，2s后模拟点击提示框的关闭按钮
+							setTimeout(function(){
+								$('#btn_success').trigger('click');
+							},2000);
+						}else{
+							$(`
+								<div class="alert alert-info alert-dismissible" id='myWarnAlert'>
+									<div>
+										删除失败，接口异常
+									</div>
+									<button class="close" onclick="closeAlert.call(this)" id='btn_warn'>
+										！
+									</button>
+								</div>
+							`).prependTo($('body'));
+							setTimeout(function(){
+								$('#btn_warn').trigger('click')
+							},2000);
+						}
+					});
+					break;
+			}	
+		})	
+
+	});
+</script>
+
+<style>
+	.btns{
+		margin-bottom: 1em;
+	}
+	.btns button {
+		margin-right: 0.5em;
+	}
+	/*删除成功弹出框*/
+	#mySuccessAlert{
+		width: 200px;
+		position: absolute;
+		right: 5%;
+		top: 8.5%;
+		z-index: 100;
+	}
+	/*删除失败弹出框*/
+	#myWarnAlert{
+		width: 250px;
+		position: absolute;
+		right: 5%;
+		top: 8.5%;
+		z-index: 100;
+	}
+</style>
